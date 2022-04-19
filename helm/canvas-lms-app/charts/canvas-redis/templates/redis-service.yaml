@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.global.name }}-redis
+spec:
+  serviceName: {{ .Values.global.name }}-redis-service
+  selector:
+    matchLabels:
+      app: {{ .Values.global.name }}-redis
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.global.name }}-redis
+    spec:
+      containers:
+      - name: {{ .Values.global.name }}-redis
+        image: {{ .Values.image }}
+        command: ["redis-server", "--appendonly", "yes"]
+        volumeMounts:
+        - name: redis-disk
+          mountPath: /data
+        ports:
+        - containerPort: 6379
+          name: redis
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-disk
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.global.name }}-redis-service
+spec:
+  selector:
+    app: {{ .Values.global.name }}-redis
+  type: ClusterIP
+  ports:
+  - port: 6379
+    targetPort: 6379

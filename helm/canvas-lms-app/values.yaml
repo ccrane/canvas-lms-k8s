@@ -1,0 +1,4 @@
+global:
+  name: canvas-lms
+
+image: registry.gitlab.com/onestepprojects/education-module/canvas-lms:stable

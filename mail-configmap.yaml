@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mail-cfgmap
+data:
+  MAIL_PORT: "1025"
+  MAIL_DOMAIN: "onesteprelief.org"
+  MAIL_DEFAULT_SENDER_ADDRESS: "admin@onesteprelief.org"
+  MAIL_DEFAULT_SENDER_NAME: "OneStepRelief Admin"

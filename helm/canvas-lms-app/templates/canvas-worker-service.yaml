@@ -1,0 +1,205 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.global.name }}-worker
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.global.name }}-worker
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.global.name }}-worker
+    spec:
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
+      containers:
+      - name: {{ .Values.global.name }}-worker
+        image: {{ .Values.image }}
+        command: ["/bin/bash", "-c", "bundle exec script/delayed_job run"]
+        volumeMounts:
+        - name: canvas-lms-worker-brandable-css-disk
+          mountPath: /usr/src/app/public/dist/brandable_css
+        - name: canvas-lms-worker-tmp-disk
+          mountPath: /usr/src/app/tmp
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/cache_store.yml
+          subPath: file-cache-store
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/cassandra.yml
+          subPath: file-cassandra
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/consul.yml
+          subPath: file-consul
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/database.yml
+          subPath: file-database
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/delayed_jobs.yml
+          subPath: file-delayed-jobs
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/domain.yml
+          subPath: file-domain
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/dynamic_settings.yml
+          subPath: file-dynamic-settings
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/outgoing_mail.yml
+          subPath: file-outgoing-mail
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/redis.yml
+          subPath: file-redis
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/security.yml
+          subPath: file-security
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/selenium.yml
+          subPath: file-selenium
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/vault.yml
+          subPath: file-vault
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/environments/development-local.rb
+          subPath: file-development-local
+        - name: canvas-mnt
+          mountPath: /usr/src/app/wait-for-it.sh
+          subPath: file-wait-for-it
+        - name: canvas-mnt
+          mountPath: /usr/src/app/lib/data_fixup/lti/fill_custom_claim_columns_for_resource_link.rb
+          subPath: file-override-fill-custom-claim-columns
+        - name: canvas-mnt
+          mountPath: /usr/src/app/lib/data_fixup/lti/fill_lookup_uuid_and_resource_link_uuid_columns.rb
+          subPath: file-override-fill-lookup-uuid
+        - name: canvas-mnt
+          mountPath: /usr/src/app/db/migrate/20210201170030_fill_lookup_uuid_and_resource_link_uuid_columns_at_lti_resource_links.rb
+          subPath: file-override-fill-lookup
+        env:
+        - name: DB_DRIVER
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-cfgmap
+              key: DB_DRIVER
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-cfgmap
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-cfgmap
+              key: DB_PORT
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.name }}-postgres-secret
+              key: user_name
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.name }}-postgres-secret
+              key: password
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-postgres-cfgmap
+              key: postgres_db
+        - name: RAILS_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-cfgmap
+              key: RAILS_ENV
+        - name: REDIS_SERVER
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-cfgmap
+              key: REDIS_SERVER
+        - name: MAIL_SERVER
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-cfgmap
+              key: MAIL_SERVER
+        - name: MAIL_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-mail-cfgmap
+              key: MAIL_PORT
+        - name: MAIL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.name }}-mail-secret
+              key: user_name
+        - name: MAIL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.name }}-mail-secret
+              key: password
+        - name: MAIL_DOMAIN
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-mail-cfgmap
+              key: MAIL_DOMAIN
+        - name: MAIL_DEFAULT_SENDER_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-mail-cfgmap
+              key: MAIL_DEFAULT_SENDER_ADDRESS
+        - name: MAIL_DEFAULT_SENDER_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-mail-cfgmap
+              key: MAIL_DEFAULT_SENDER_NAME
+        - name: PASSENGER_STARTUP_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-cfgmap
+              key: PASSENGER_STARTUP_TIMEOUT
+        - name: DOMAIN
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-cfgmap
+              key: DOMAIN
+        - name: APP_DOMAIN
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-cfgmap
+              key: APP_DOMAIN
+        - name: CG_HTTP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-cfgmap
+              key: CG_HTTP_PORT
+        - name: CG_HTTPS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-cfgmap
+              key: CG_HTTPS_PORT
+        ports:
+        - containerPort: 8900
+          name: canvas
+      volumes:
+      - name: canvas-mnt
+        configMap:
+          name: {{ .Values.global.name }}-cfgmap
+          defaultMode: 0777
+      - name: {{ .Values.global.name }}-worker-brandable-css-disk
+        persistentVolumeClaim:
+          claimName: {{ .Values.global.name }}-brandable-css-disk-canvas-lms-0
+      - name: {{ .Values.global.name }}-worker-tmp-disk
+        persistentVolumeClaim:
+          claimName: {{ .Values.global.name }}-tmp-disk-canvas-lms-0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.global.name }}-worker-service
+spec:
+  selector:
+    app: {{ .Values.global.name }}-worker
+  type: ClusterIP
+  ports:
+  - port: 8900
+    targetPort: 8900

@@ -1,0 +1,110 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:12.4
+    environment:
+      - POSTGRES_USER=canvas
+      - POSTGRES_PASSWORD=canvas
+      - POSTGRES_DB=canvas
+    volumes:
+      - ./.data/postgres:/var/lib/postgresql/data
+    ports:
+      - "15432:5432"
+    # # use https://github.com/tianon/docker-postgres-upgrade for upgrading postgres as needed
+    # # also need to add `host all all all md5` to `.data/postgres/pg_hba.conf` after copying over the updated files
+    # image: tianon/postgres-upgrade:9.6-to-12
+    # environment:
+    #   - POSTGRES_USER=canvas
+    #   - POSTGRES_PASSWORD=canvas
+    #   - POSTGRES_DB=canvas
+    # volumes:
+    #   - ./.data/postgres:/var/lib/postgresql/data
+    #   # copy data from .data/postgres into here before running image
+    #   - ./.data/postgres-9.6:/var/lib/postgresql/9.6/data
+    #   # copy data from here into .data/postgres after running image
+    #   - ./.data/postgres-12:/var/lib/postgresql/12/data
+    # ports:
+    #   - "15432:5432"
+  redis:
+    image: redis:6.0-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - ./.data/redis:/data
+  mail:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "8902:8025"
+  app: &app
+    image: registry.gitlab.com/onestepprojects/education-module/canvas-lms:stable
+    command: bash -c "./wait-for-it.sh -t 40 db:5432 && /usr/src/entrypoint"
+    environment:
+      - DB_DRIVER=postgresql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USERNAME=canvas
+      - DB_PASSWORD=canvas
+      - DB_NAME=canvas
+      - RAILS_ENV=production
+      - REDIS_SERVER=redis://redis:6379
+      - MAIL_SERVER=mail
+      - MAIL_PORT=1025
+      - MAIL_USERNAME=canvas
+      - MAIL_PASSWORD=canvas
+      - MAIL_DOMAIN=example.com
+      - MAIL_DEFAULT_SENDER_ADDRESS=canvas@example.com
+      - MAIL_DEFAULT_SENDER_NAME=Canvas Admin
+      - PASSENGER_STARTUP_TIMEOUT=300
+      - DOMAIN=docker_canvas_app:8900
+      - APP_DOMAIN=docker_canvas_app
+      # need both ports to be equal or it'll redirect HTTP to HTTPS, and we
+      # haven't setup HTTPS
+      - CG_HTTP_PORT=8900
+      - CG_HTTPS_PORT=8900
+    volumes:
+      # config
+      - ./deploy/cache_store.yml:/usr/src/app/config/cache_store.yml:ro
+      - ./deploy/cassandra.yml:/usr/src/app/config/cassandra.yml:ro
+      - ./deploy/consul.yml:/usr/src/app/config/consul.yml:ro
+      - ./deploy/database.yml:/usr/src/app/config/database.yml:ro
+      - ./deploy/delayed_jobs.yml:/usr/src/app/config/delayed_jobs.yml:ro
+      - ./deploy/domain.yml:/usr/src/app/config/domain.yml:ro
+      - ./deploy/dynamic_settings.yml:/usr/src/app/config/dynamic_settings.yml:ro
+      - ./deploy/outgoing_mail.yml:/usr/src/app/config/outgoing_mail.yml:ro
+      - ./deploy/redis.yml:/usr/src/app/config/redis.yml:ro
+      - ./deploy/security.yml:/usr/src/app/config/security.yml:ro
+      - ./deploy/selenium.yml:/usr/src/app/config/selenium.yml:ro
+      - ./deploy/vault.yml:/usr/src/app/config/vault.yml:ro
+      # override config settings
+      - ./deploy/development-local.rb:/usr/src/app/config/environments/development-local.rb:ro
+      # persistence
+      - ./.data/public/dist/brandable_css:/usr/src/app/public/dist/brandable_css
+      - ./.data/tmp:/usr/src/app/tmp
+      # wait for it script
+      - ./wait-for-it.sh:/usr/src/app/wait-for-it.sh:ro
+      # fixes/overrides
+      - ./override/fill_custom_claim_columns_for_resource_link.rb:/usr/src/app/lib/data_fixup/lti/fill_custom_claim_columns_for_resource_link.rb
+      - ./override/fill_lookup_uuid_and_resource_link_uuid_columns.rb:/usr/src/app/lib/data_fixup/lti/fill_lookup_uuid_and_resource_link_uuid_columns.rb
+      - ./override/20210201170030_fill_lookup_uuid_and_resource_link_uuid_columns_at_lti_resource_links.rb:/usr/src/app/db/migrate/20210201170030_fill_lookup_uuid_and_resource_link_uuid_columns_at_lti_resource_links.rb
+    ports:
+      - "8900:8900"
+    depends_on:
+      - db
+      - redis
+      - mail
+    networks:
+      default:
+        aliases:
+          - app
+      docker_canvas_bridge:
+        aliases:
+          - docker_canvas_app
+  worker:
+    <<: *app
+    command: bundle exec script/delayed_job run
+    ports: []
+    networks:
+      - default
+
+networks:
+  docker_canvas_bridge:
+    name: docker_canvas_bridge

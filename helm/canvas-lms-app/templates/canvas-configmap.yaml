@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.global.name }}-cfgmap
+data:
+  DB_DRIVER: "postgresql"
+  DB_HOST: {{ printf "%s-%s" .Values.global.name "postgresql-db-service" | quote }}
+  DB_PORT: "5432"
+  RAILS_ENV: "production"
+  REDIS_SERVER: "redis://redis-service:6379"
+  MAIL_SERVER: {{ printf "%s-%s" .Values.global.name "mail-service" | quote }}
+  PASSENGER_STARTUP_TIMEOUT: "300"
+  DOMAIN: "docker_canvas_app:8900"
+  APP_DOMAIN: "docker_canvas_app"
+  # need both ports to be equal or it'll redirect HTTP to HTTPS, and we
+  # haven't setup HTTPS
+  CG_HTTP_PORT: "8900"
+  CG_HTTPS_PORT: "8900"
+  file-cache-store: |
+{{ .Files.Get "deploy/cache_store.yml" | indent 4 }}
+  file-cassandra: |
+{{ .Files.Get "deploy/cassandra.yml" | indent 4 }}
+  file-consul: |
+{{ .Files.Get "deploy/consul.yml" | indent 4 }}
+  file-database: |
+{{ .Files.Get "deploy/database.yml" | indent 4 }}
+  file-delayed-jobs: |
+{{ .Files.Get "deploy/delayed_jobs.yml" | indent 4 }}
+  file-development-local: |
+{{ .Files.Get "deploy/development-local.rb" | indent 4 }}
+  file-domain: |
+{{ .Files.Get "deploy/domain.yml" | indent 4 }}  
+  file-dynamic-settings: |
+{{ .Files.Get "deploy/dynamic_settings.yml" | indent 4 }}      
+  file-outgoing-mail: |
+{{ .Files.Get "deploy/outgoing_mail.yml" | indent 4 }}
+  file-redis: |
+{{ .Files.Get "deploy/redis.yml" | indent 4 }}
+  file-security: |
+{{ .Files.Get "deploy/security.yml" | indent 4 }}
+  file-selenium: |
+{{ .Files.Get "deploy/selenium.yml" | indent 4 }}
+  file-vault: |
+{{ .Files.Get "deploy/vault.yml" | indent 4 }}
+  file-override-fill-lookup: |
+{{ .Files.Get "override/20210201170030_fill_lookup_uuid_and_resource_link_uuid_columns_at_lti_resource_links.rb" | indent 4 }}
+  file-override-fill-custom-claim-columns: |
+{{ .Files.Get "override/fill_custom_claim_columns_for_resource_link.rb" | indent 4 }}
+  file-override-fill-lookup-uuid: |
+{{ .Files.Get "override/fill_lookup_uuid_and_resource_link_uuid_columns.rb" | indent 4 }}
+  file-wait-for-it: |
+{{ .Files.Get "wait-for-it.sh" | indent 4 }}

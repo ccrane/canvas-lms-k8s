@@ -1,0 +1,11 @@
+default: &default
+  domain: <%= ENV['DOMAIN'] %>
+
+development:
+  <<: *default
+
+production:
+  <<: *default
+
+test:
+  <<: *default

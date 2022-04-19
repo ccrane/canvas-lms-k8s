@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.global.name }}-mail
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.global.name }}-mail
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.global.name }}-mail
+    spec:
+      containers:
+      - name: {{ .Values.global.name }}-mail
+        image: {{ .Values.image }}
+        env:
+        - name: MAIL_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.name }}-mail-secret
+              key: user_name
+        - name: MAIL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.name }}-mail-secret
+              key: password
+        - name: MAIL_DOMAIN
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-mail-cfgmap
+              key: MAIL_DOMAIN
+        - name: MAIL_DEFAULT_SENDER_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-mail-cfgmap
+              key: MAIL_DEFAULT_SENDER_ADDRESS
+        - name: MAIL_DEFAULT_SENDER_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-mail-cfgmap
+              key: MAIL_DEFAULT_SENDER_NAME
+        ports:
+        - containerPort: 1025
+          name: mail
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.global.name }}-mail-service
+spec:
+  selector:
+    app: {{ .Values.global.name }}-mail
+  type: LoadBalancer
+  ports:
+  - port: 1025
+    targetPort: 1025

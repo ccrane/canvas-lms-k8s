@@ -1,0 +1,215 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: canvas-lms
+spec:
+  serviceName: canvas-lms-service
+  selector:
+    matchLabels:
+      app: canvas-lms
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: canvas-lms
+    spec:
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
+      containers:
+      - name: canvas-lms
+        image: registry.gitlab.com/onestepprojects/education-module/canvas-lms:stable
+        command: ["/bin/bash", "-c", "./wait-for-it.sh -t 40 $(DB_HOST):$(DB_PORT) && /usr/src/entrypoint"]
+        volumeMounts:
+        - name: canvas-lms-brandable-css-disk
+          mountPath: /usr/src/app/public/dist/brandable_css
+        - name: canvas-lms-tmp-disk
+          mountPath: /usr/src/app/tmp
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/cache_store.yml
+          subPath: file-cache-store
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/cassandra.yml
+          subPath: file-cassandra
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/consul.yml
+          subPath: file-consul
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/database.yml
+          subPath: file-database
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/delayed_jobs.yml
+          subPath: file-delayed-jobs
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/domain.yml
+          subPath: file-domain
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/dynamic_settings.yml
+          subPath: file-dynamic-settings
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/outgoing_mail.yml
+          subPath: file-outgoing-mail
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/redis.yml
+          subPath: file-redis
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/security.yml
+          subPath: file-security
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/selenium.yml
+          subPath: file-selenium
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/vault.yml
+          subPath: file-vault
+        - name: canvas-mnt
+          mountPath: /usr/src/app/config/environments/development-local.rb
+          subPath: file-development-local
+        - name: canvas-mnt
+          mountPath: /usr/src/app/wait-for-it.sh
+          subPath: file-wait-for-it
+        - name: canvas-mnt
+          mountPath: /usr/src/app/lib/data_fixup/lti/fill_custom_claim_columns_for_resource_link.rb
+          subPath: file-override-fill-custom-claim-columns
+        - name: canvas-mnt
+          mountPath: /usr/src/app/lib/data_fixup/lti/fill_lookup_uuid_and_resource_link_uuid_columns.rb
+          subPath: file-override-fill-lookup-uuid
+        - name: canvas-mnt
+          mountPath: /usr/src/app/db/migrate/20210201170030_fill_lookup_uuid_and_resource_link_uuid_columns_at_lti_resource_links.rb
+          subPath: file-override-fill-lookup
+        env:
+        - name: DB_DRIVER
+          valueFrom:
+            configMapKeyRef:
+              name: canvas-cfgmap
+              key: DB_DRIVER
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: canvas-cfgmap
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: canvas-cfgmap
+              key: DB_PORT
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: user_name
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: password
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-cfgmap
+              key: postgres_db
+        - name: RAILS_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: canvas-cfgmap
+              key: RAILS_ENV
+        - name: REDIS_SERVER
+          valueFrom:
+            configMapKeyRef:
+              name: canvas-cfgmap
+              key: REDIS_SERVER
+        - name: MAIL_SERVER
+          valueFrom:
+            configMapKeyRef:
+              name: canvas-cfgmap
+              key: MAIL_SERVER
+        - name: MAIL_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mail-cfgmap
+              key: MAIL_PORT
+        - name: MAIL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mail-secret
+              key: user_name
+        - name: MAIL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mail-secret
+              key: password
+        - name: MAIL_DOMAIN
+          valueFrom:
+            configMapKeyRef:
+              name: mail-cfgmap
+              key: MAIL_DOMAIN
+        - name: MAIL_DEFAULT_SENDER_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: mail-cfgmap
+              key: MAIL_DEFAULT_SENDER_ADDRESS
+        - name: MAIL_DEFAULT_SENDER_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: mail-cfgmap
+              key: MAIL_DEFAULT_SENDER_NAME
+        - name: PASSENGER_STARTUP_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: canvas-cfgmap
+              key: PASSENGER_STARTUP_TIMEOUT
+        - name: DOMAIN
+          valueFrom:
+            configMapKeyRef:
+              name: canvas-cfgmap
+              key: DOMAIN
+        - name: APP_DOMAIN
+          valueFrom:
+            configMapKeyRef:
+              name: canvas-cfgmap
+              key: APP_DOMAIN
+        - name: CG_HTTP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: canvas-cfgmap
+              key: CG_HTTP_PORT
+        - name: CG_HTTPS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: canvas-cfgmap
+              key: CG_HTTPS_PORT
+        ports:
+        - containerPort: 8900
+          name: canvas
+      volumes:
+      - name: canvas-mnt
+        configMap:
+          name: canvas-cfgmap
+          defaultMode: 0777
+  volumeClaimTemplates:
+  - metadata:
+      name: canvas-lms-brandable-css-disk
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 50Gi
+  - metadata:
+      name: canvas-lms-tmp-disk
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 50Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: canvas-lms-service
+spec:
+  selector:
+    app: canvas-lms
+  type: LoadBalancer
+  ports:
+  - port: 8900
+    targetPort: 8900

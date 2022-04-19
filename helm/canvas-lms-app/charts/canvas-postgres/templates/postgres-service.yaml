@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.global.name }}-postgresql-db
+spec:
+  serviceName: {{ .Values.global.name }}-postgresql-db-service
+  selector:
+    matchLabels:
+      app: {{ .Values.global.name }}-postgresql-db
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.global.name }}-postgresql-db
+    spec:
+      containers:
+      - name: {{ .Values.global.name }}-postgresql-db
+        image: postgres:12.4
+        volumeMounts:
+        - name: postgresql-db-disk
+          mountPath: /var/lib/postgresql/data
+        env:
+        - name: PGDATA
+          value: /var/lib/postgresql/data/db_files
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.name }}-postgres-secret
+              key: user_name
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.name }}-postgres-secret
+              key: password
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.name }}-postgres-cfgmap
+              key: postgres_db
+        ports:
+        - containerPort: 5432
+          name: postgres
+  volumeClaimTemplates:
+  - metadata:
+      name: postgresql-db-disk
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 25Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.global.name }}-postgresql-db-service
+spec:
+  selector:
+    app: {{ .Values.global.name }}-postgresql-db
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
